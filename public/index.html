@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>RAG Clip</title>
+  <style>
+    body { font-family: system-ui; max-width: 600px; margin: 50px auto; padding: 20px; }
+    #drop-zone { border: 2px dashed #ccc; padding: 50px; text-align: center; margin: 20px 0; }
+    #drop-zone.drag-over { background: #f0f0f0; }
+    input, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; }
+    #status { margin: 10px 0; color: green; }
+  </style>
+</head>
+<body>
+  <div id="auth">
+    <h2>Sign Up / Login</h2>
+    <input id="email" type="email" placeholder="Email">
+    <input id="password" type="password" placeholder="Password">
+    <button onclick="signup()">Sign Up</button>
+    <button onclick="login()">Login</button>
+  </div>
+
+  <div id="app" style="display:none">
+    <h2>Save to RAG</h2>
+    
+    <div id="drop-zone">
+      Drag & drop files here<br>
+      (PDF, DOCX, Excel, Images)
+    </div>
+    <input type="file" id="file-input" multiple style="display:none">
+    
+    <h3>Or save webpage</h3>
+    <input id="url" placeholder="URL">
+    <input id="title" placeholder="Title">
+    <textarea id="content" placeholder="Content" rows="5"></textarea>
+    <button onclick="saveWebpage()">Save Webpage</button>
+    
+    <div id="status"></div>
+  </div>
+
+  <script>
+    let token = localStorage.getItem('token');
+    if (token) showApp();
+
+    async function signup() {
+      const res = await fetch('/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: document.getElementById('email').value,
+          password: document.getElementById('password').value
+        })
+      });
+      const data = await res.json();
+      if (data.token) {
+        token = data.token;
+        localStorage.setItem('token', token);
+        showApp();
+      }
+    }
+
+    async function login() {
+      const res = await fetch('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: document.getElementById('email').value,
+          password: document.getElementById('password').value
+        })
+      });
+      const data = await res.json();
+      if (data.token) {
+        token = data.token;
+        localStorage.setItem('token', token);
+        showApp();
+      }
+    }
+
+    function showApp() {
+      document.getElementById('auth').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+    }
+
+    async function saveWebpage() {
+      await fetch('/save', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          url: document.getElementById('url').value,
+          title: document.getElementById('title').value,
+          content: document.getElementById('content').value
+        })
+      });
+      document.getElementById('status').textContent = 'Saved!';
+    }
+
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('drag-over');
+    });
+
+    dropZone.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      
+      for (const file of e.dataTransfer.files) {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        await fetch('/upload', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
+        });
+      }
+      
+      document.getElementById('status').textContent = 'Files uploaded!';
+    });
+
+    fileInput.addEventListener('change', async (e) => {
+      for (const file of e.target.files) {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        await fetch('/upload', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
+        });
+      }
+      
+      document.getElementById('status').textContent = 'Files uploaded!';
+    });
+  </script>
+</body>
+</html>
