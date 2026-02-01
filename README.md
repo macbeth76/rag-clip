@@ -1,6 +1,6 @@
 # RAG Clip
 
-Multi-format personal RAG with user auth. Save webpages, PDFs, DOCX, Excel, images.
+Multi-format personal RAG with user auth, hybrid search, and clean article extraction.
 
 ## Setup
 
@@ -21,8 +21,10 @@ npm run server
 
 - **User Auth**: Sign up/login with JWT
 - **File Upload**: Drag & drop PDF, DOCX, Excel, images
-- **Web Pages**: Save URL + content
+- **Web Pages**: Auto-fetch with Readability.js for clean extraction
 - **OCR**: Extract text from images (Tesseract)
+- **Hybrid Search**: Semantic (vector) + keyword (BM25) search
+- **Filters**: By content type and date range
 - **MCP Server**: Query via Kiro CLI
 
 ## Supported Formats
@@ -31,7 +33,13 @@ npm run server
 - DOCX → text extraction  
 - Excel → sheet to text
 - Images → OCR text
-- Web pages → raw content
+- Web pages → clean article extraction (Readability.js)
+
+## Search Modes
+
+- **Semantic**: Vector similarity search (best for concepts)
+- **Keyword**: BM25 full-text search (best for exact terms)
+- **Hybrid**: Combined scoring (default, best overall)
 
 ## MCP Config
 
@@ -51,8 +59,17 @@ Add to `~/.config/kiro-cli/mcp.json`:
 }
 ```
 
-Query with: `search_saved_content(query="your search", userId=1)`
+Query examples:
+```javascript
+// Basic search
+search_saved_content(query="machine learning", userId=1)
 
-## Browser Extension
+// Keyword only
+search_saved_content(query="exact phrase", userId=1, mode="keyword")
 
-Update `extension/popup.js` to include auth token in requests.
+// Filter by type
+search_saved_content(query="python", userId=1, type="pdf")
+
+// Filter by date
+search_saved_content(query="news", userId=1, startDate="2026-01-01")
+```

@@ -32,8 +32,26 @@
     <h3>Or save webpage</h3>
     <input id="url" placeholder="URL">
     <input id="title" placeholder="Title">
-    <textarea id="content" placeholder="Content" rows="5"></textarea>
+    <textarea id="content" placeholder="Content (or leave empty to fetch)" rows="5"></textarea>
     <button onclick="saveWebpage()">Save Webpage</button>
+    
+    <h3>Search</h3>
+    <input id="search-query" placeholder="Search query">
+    <select id="search-mode">
+      <option value="hybrid">Hybrid</option>
+      <option value="semantic">Semantic</option>
+      <option value="keyword">Keyword</option>
+    </select>
+    <select id="search-type">
+      <option value="">All Types</option>
+      <option value="webpage">Webpage</option>
+      <option value="pdf">PDF</option>
+      <option value="docx">DOCX</option>
+      <option value="excel">Excel</option>
+      <option value="image">Image</option>
+    </select>
+    <button onclick="search()">Search</button>
+    <div id="search-results"></div>
     
     <div id="status"></div>
   </div>
@@ -82,6 +100,21 @@
     }
 
     async function saveWebpage() {
+      const url = document.getElementById('url').value;
+      let content = document.getElementById('content').value;
+      let html = null;
+      
+      // Fetch page if no content provided
+      if (!content && url) {
+        try {
+          const proxyRes = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+          const data = await proxyRes.json();
+          html = data.contents;
+        } catch (e) {
+          console.error('Failed to fetch URL', e);
+        }
+      }
+      
       await fetch('/save', {
         method: 'POST',
         headers: { 
@@ -89,12 +122,38 @@
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          url: document.getElementById('url').value,
+          url,
           title: document.getElementById('title').value,
-          content: document.getElementById('content').value
+          content,
+          html
         })
       });
       document.getElementById('status').textContent = 'Saved!';
+    }
+
+    async function search() {
+      const query = document.getElementById('search-query').value;
+      const mode = document.getElementById('search-mode').value;
+      const type = document.getElementById('search-type').value;
+      
+      const res = await fetch('/search', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ query, mode, type: type || undefined })
+      });
+      
+      const data = await res.json();
+      const resultsDiv = document.getElementById('search-results');
+      resultsDiv.innerHTML = data.results.map(r => `
+        <div style="border:1px solid #ccc;padding:10px;margin:10px 0">
+          <strong>${r.metadata.title || 'Untitled'}</strong> (${r.type}, score: ${r.score.toFixed(2)})<br>
+          <small>${r.metadata.url || r.metadata.type}</small><br>
+          ${r.content.slice(0, 200)}...
+        </div>
+      `).join('');
     }
 
     const dropZone = document.getElementById('drop-zone');

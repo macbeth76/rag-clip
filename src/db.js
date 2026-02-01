@@ -17,10 +17,14 @@ db.exec(`
     url TEXT,
     file_path TEXT,
     content TEXT,
+    excerpt TEXT,
     chroma_id TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
+
+  CREATE INDEX IF NOT EXISTS idx_user_type ON items(user_id, type);
+  CREATE INDEX IF NOT EXISTS idx_user_date ON items(user_id, created_at);
 `);
 
 export default db;
